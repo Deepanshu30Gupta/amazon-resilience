@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+*.pkl
+
+# Raw data files are large - track with a README instead of committing the actual files
+data/raw/*.tif
