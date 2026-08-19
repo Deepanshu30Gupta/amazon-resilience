@@ -14,9 +14,12 @@
 //    called "GEE_exports" once done (can take a while - large area/time range)
 // ============================================================
 
-// ---- 1. Define study region (adjust later if needed) ----
-var region = ee.Geometry.Rectangle([-58, -14, -50, -8]); 
-// [west, south, east, north] = [-58W, -14S, -50W, -8S]
+// ---- 1. Define study region (EXPANDED - v2, to properly test distance decay) ----
+var region = ee.Geometry.Rectangle([-66, -18, -46, -4]); 
+// [west, south, east, north] = [-66W, -18S, -46W, -4S]
+// Expanded from the original [-58,-14,-50,-8] box to roughly triple the area,
+// so we can test whether the neighbor effect decays over longer distances
+// (original region maxed out at ~1000km; this one reaches ~2000km+)
 
 Map.centerObject(region, 6);
 Map.addLayer(region, {color: 'red'}, 'Study Area');
