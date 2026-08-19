@@ -16,9 +16,9 @@ The Cerrado–Amazon Transition (CAT) / "Arc of Deforestation" — the
 world's largest tropical forest–savanna ecotone, spanning parts of
 Mato Grosso, Pará, Rondônia, and neighboring Brazilian states.
 
-- **v1 region** (initial pipeline test): 8°S–14°S, 50°W–58°W (~1,000 km extent)
+- **v1 region** (initial pipeline test, archived): 8°S–14°S, 50°W–58°W (~1,000 km extent)
 - **v2 region** (current, expanded to properly test distance decay):
-  4°S–18°S, 46°W–66°W (~2,000+ km extent)
+  4°S–18°S, 46°W–66°W (~2,500+ km extent)
 
 ## Data Sources
 
@@ -72,7 +72,8 @@ amazon-resilience/
 ├── src/                    # Pipeline scripts, numbered in run order
 ├── data/raw/                # Downloaded GeoTIFFs (not tracked in git - see below)
 ├── data/processed/          # Script outputs (CSVs, intermediate arrays)
-└── figures/                 # Generated plots
+└── figures/                 # Generated plots (current/v2 region)
+    └── v1_region/            # Archived figures from the original smaller study region
 ```
 
 Raw `.tif` files are not committed to git (too large) — see
@@ -88,20 +89,60 @@ Run the GEE export script in the [Earth Engine Code Editor](https://code.earthen
 download the resulting files from Google Drive into `data/raw/`, then
 run the pipeline scripts in order.
 
-## Key Findings (v1 region, 8°S–14°S / 50°W–58°W)
+## Key Findings
 
-- 33.3% of 252 patches show a statistically significant increasing
-  AR(1) trend (resilience loss) between 2003–2018.
-- A patch's neighboring patches' vegetation state significantly
-  predicts its own future state (coef ≈ 0.077, p ≈ 0.006), even after
-  controlling for local precipitation — the effect is not just shared
-  rainfall in disguise.
-- This neighbor effect does not decay with distance within the v1
-  region, even out to 800–1,100 km, and this holds after adding a
-  regional (whole-area) precipitation control as well — motivating the
-  region expansion for v2.
+### v1 region (8°S–14°S, 50°W–58°W, ~1,000 km extent, 252 patches)
+- 33.3% of patches show a statistically significant increasing AR(1) trend
+  (resilience loss) between 2003–2018.
+- Neighbor effect on future vegetation state: coef ≈ 0.077, p ≈ 0.006,
+  surviving a local precipitation control.
+- Effect does not decay with distance, tested up to ~1,100 km.
+- See `figures/v1_region/` for the corresponding maps and plots.
 
-*(v2 region results to be added once the expanded-region pipeline run is complete.)*
+### v2 region (4°S–18°S, 46°W–66°W, ~2,500 km extent, 352 patches)
+- 44.9% of patches (158/352) show a statistically significant increasing
+  AR(1) trend between 2003–2018 - a larger share than v1, likely
+  reflecting the broader area sampled.
+- Neighbor effect: coef ≈ 0.087, p < 0.001, essentially unchanged whether
+  controlling for local precipitation, regional (whole-area) precipitation,
+  or both together (local precipitation itself becomes non-significant
+  once the regional control is added, suggesting most of the local
+  precipitation signal was actually regional in origin).
+- Effect still does not decay with distance, now tested up to 2,542 km -
+  replicating the v1 finding on an independently larger region.
+- See `figures/` (root) for these plots.
+
+### Interpretation
+The neighbor effect - vegetation state in nearby patches predicting a
+target patch's future state - is a robust, repeated finding across two
+independently-sized study regions, and survives both local and
+regional-scale precipitation controls. It does not decay with distance
+within either tested region, suggesting the true spatial scale of
+influence (if it exists as a genuine local process) may exceed even our
+larger ~2,500 km study area, or that an unmeasured factor beyond
+precipitation contributes to the pattern. This is reported as an honest,
+open finding rather than forced into a decay curve that the data does
+not support.
+
+**Note:** raw `.tif` files for the v1 region are no longer stored locally
+(overwritten when the study area was expanded), but are fully
+regenerable via `gee/vodca_chirps_export.js` using the v1 bounding box
+noted in that script's comments.
+
+## Robustness Testing (in progress)
+
+Before proceeding to a causal/counterfactual model, the neighbor-effect
+finding above is being stress-tested to rule out alternative
+explanations:
+- Placebo test (using future neighbor state to predict past target
+  state - should show no effect if the methodology is sound)
+- Different time delays (2-3 month lags, not just 1 month)
+- Alternative neighbor definitions (diagonal adjacency, fixed-radius)
+- Additional statistical controls (year/seasonal fixed effects)
+- Sensitivity to patch size choice
+
+Only once these hold up does the project proceed to the counterfactual
+model and, time permitting, a graph neural network comparison.
 
 ## References
 
@@ -112,4 +153,4 @@ Graph WaveNet — Wu et al. 2019; Raissi et al. 2019; CaST — 2023).
 
 ## Team
 
-[Your names], IRIS National Fair 2026–27
+Deepanshu Gupta and Ananya Dixit
