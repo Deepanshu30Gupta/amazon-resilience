@@ -22,7 +22,9 @@ import os
 
 VODCA_PATH = "data/raw/vodca_amazon_cerrado_monthly.tif"
 OUT_DIR = "data/processed"
-PATCH_SIZE = 2  # n x n pixel blocks
+PATCH_SIZE = 4  # n x n pixel blocks (bumped from 2 to 4 for the expanded v2 region,
+                # to keep patch count manageable - was 252 patches at size 2 on the
+                # smaller v1 region; size 4 on this larger region gives a similar count)
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -66,6 +68,15 @@ def main():
     })
     patch_meta.to_csv(os.path.join(OUT_DIR, "patch_locations.csv"), index=False)
     np.save(os.path.join(OUT_DIR, "patch_vod.npy"), patch_vod)
+
+    # Check how many patches have any missing months after aggregation -
+    # relevant now since the expanded region has more raw NaN pixels than before
+    n_missing_patches = np.isnan(patch_vod).any(axis=0).sum()
+    print(f"\nPatches with at least one missing month: {n_missing_patches} / "
+          f"{n_patch_rows * n_patch_cols}")
+    if n_missing_patches > 0:
+        print("(These will need to be handled - likely dropped - in later stages")
+        print("if the missing months are frequent for any given patch.)")
 
     print("Saved patch_locations.csv and patch_vod.npy to", OUT_DIR)
     print(patch_meta.head())
