@@ -24,7 +24,8 @@ import os
 VODCA_PATH = "data/raw/vodca_amazon_cerrado_monthly.tif"
 CHIRPS_PATH = "data/raw/chirps_amazon_cerrado_monthly.tif"
 OUT_DIR = "data/processed"
-PATCH_SIZE = 2
+PATCH_SIZE = 4  # MUST match Stage 2's PATCH_SIZE exactly, or the CHIRPS aggregation
+                # will misalign with the VODCA patch grid
 START_DATE = "2003-01-01"
 
 def aggregate_chirps_to_patches():
