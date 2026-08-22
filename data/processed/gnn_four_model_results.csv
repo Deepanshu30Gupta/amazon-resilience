@@ -1,0 +1,5 @@
+model,test_rmse
+1. Baseline (no spatial),0.075943224132061
+3. Adaptive/learned GNN,0.1013931855559349
+2. Fixed geographic GNN,0.14747586846351624
+4. Attention-based GNN,0.16070213913917542
