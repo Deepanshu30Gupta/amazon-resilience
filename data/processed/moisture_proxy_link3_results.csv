@@ -1,0 +1,2 @@
+link,coef,pval,ci_low,ci_high,holds
+own precip -> own future resilience,-8.939942342352915e-06,0.47560375743462424,-3.350145448408883e-05,1.5621569799382995e-05,False

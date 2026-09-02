@@ -1,41 +1,49 @@
 """
-44_directionality_propagation.py
+45_mechanism_test.py
 
-Purpose: Stage 42/43 established a robust, window-validated pattern:
-positive resilience linkage at short distances/short lags, and a
-negative reversal at long distances (800-1100km) that strengthens at
-longer lags. This tests whether that pattern looks like genuine
-DIRECTIONAL PROPAGATION (A's resilience change precedes and predicts
-B's) or SYMMETRIC SYNCHRONY (A and B move together with no clear time
-direction, most likely from shared forcing) - the same fundamental
-distinction established in Stages 9-11, now applied to the new
-resilience-to-resilience framework and specifically tested for both
-the near-distance and far-distance patterns.
+Purpose: Stage 44 found a two-regime pattern - near/intermediate
+distances (75-650km) show short-lag, positive, largely symmetric
+associations (consistent with synchrony/shared local forcing); far
+distances (800-1100km) show long-lag, negative, temporally ASYMMETRIC
+associations (forward significant, backward/placebo null - more
+consistent with a directional component than pure synchrony).
 
-PART A: Placebo/direction test (same logic as Stages 9-11). For the
-near band (75-450km, where Stage 42/43 found a robust POSITIVE effect)
-and the far band (800-1100km, where a robust NEGATIVE effect was
-found), compares:
-  FORWARD:  neighbor_resilience(t)   -> own_resilience(t+lag)  [the
-            real, established Stage 42 test]
-  BACKWARD: neighbor_resilience(t+lag) -> own_resilience(t)    [placebo -
-            using the neighbor's FUTURE state to "predict" B's PAST
-            state; this relationship should NOT exist if the effect is
-            genuinely forward-directional]
-If forward and backward are comparably strong, that indicates symmetric
-synchrony, not directional propagation - consistent with how this
-same test was interpreted throughout the project.
+This stage does NOT try to prove the far-distance effect is real. It
+tries to ELIMINATE competing explanations, in order of increasing
+stringency, for the far-distance (800-1100km) negative association at
+lag=3 and lag=6:
 
-PART B: Propagation-speed test. For each distance band, finds which
-lag (1, 2, 3, 6) shows the strongest/most significant effect. If the
-effect emerges at a systematically LONGER lag as distance increases,
-that is suggestive of a signal actually traveling across space (a
-"propagation speed"). If the peak lag doesn't shift with distance,
-that argues against literal geographic propagation.
+  H0 (null/competing): the apparent long-distance reversal is
+     explained by shared climate forcing, spatial/geographic
+     confounding, or other common drivers - NOT a directional
+     resilience relationship.
+  H1: the association remains after conditioning on shared climate
+     forcing and other plausible confounders.
 
-WORDING DISCIPLINE: even strong directional asymmetry (forward >>
-backward) would support propagation being MORE LIKELY than pure
-synchrony - it would not by itself prove a physical/causal mechanism.
+Four progressively stronger models, in order:
+  Step 1: bare (own resilience + neighbor resilience only, no controls)
+  Step 2: + existing local both-sided environmental controls (the
+    Stage 42/44 model - precip/temp/soil/PDSI/VPD/wind/solar/RZSM/
+    deltaT/TWI/disturbance, for BOTH patches, + ONI once)
+  Step 3: + REGIONAL (whole-study-area) climate controls - basin-wide
+    mean precipitation, temperature, VPD, and PDSI anomaly each month,
+    testing whether a broader-than-local shared climate signal (not
+    just each patch's own conditions) explains the effect
+  Step 4: + explicit LATITUDE/LONGITUDE for both patches - testing
+    whether the known north-south resilience gradient (Stage 5) or
+    other geographic positioning, not yet explicitly controlled even
+    though TWI/disturbance distance are, explains the effect
+
+Finally, the FORWARD vs BACKWARD (placebo) comparison from Stage 44 is
+re-run at the most stringent (Step 4) control level - if the
+asymmetry (forward significant, backward null) still holds after this
+much more demanding specification, that is substantially more
+compelling evidence for H1 than the Stage 44 result alone.
+
+WORDING DISCIPLINE: surviving these controls would support H1 being
+MORE LIKELY than H0 - it does not prove a physical/causal mechanism,
+and unmeasured confounders can never be fully ruled out in an
+observational study of this kind.
 
 Input:  data/processed/patch_timeseries_anomaly.csv
         data/processed/patch_adjacency.csv
@@ -45,9 +53,9 @@ Input:  data/processed/patch_timeseries_anomaly.csv
         data/processed/patch_rolling_ar1.csv (reused if present)
         data/raw/[all environmental raster files]
         data/raw/oni_index.csv
-Output: data/processed/directionality_test_results.csv (Part A)
-        data/processed/propagation_speed_results.csv (Part B)
-        figures/directionality_forward_vs_backward.png
+Output: data/processed/mechanism_test_progressive_controls.csv
+        data/processed/mechanism_test_final_placebo.csv
+        figures/mechanism_test_progressive_controls.png
 """
 
 import rasterio
@@ -152,8 +160,9 @@ def lag1_autocorr(x):
         return np.nan
     return np.corrcoef(x[:-1], x[1:])[0, 1]
 
-NEAR_BAND = (75, 450)   # where Stage 42/43 found robust POSITIVE effect
-FAR_BAND = (800, 1100)  # where Stage 42/43 found robust NEGATIVE effect
+FAR_BAND = (800, 1100)
+FAR_LAGS = [3, 6]  # focusing on the lags where the effect was significant in Stage 42-44
+REGIONAL_CLIMATE_VARS = ["precip_anomaly", "temp_anomaly", "vpd_anomaly", "pdsi_anomaly"]
 
 def main():
     loc = pd.read_csv(os.path.join(OUT_DIR, "patch_locations.csv"))
@@ -219,9 +228,14 @@ def main():
                .merge(twi_df, on="patch_id", how="left") \
                .merge(dist_disturbance_df, on="patch_id", how="left") \
                .merge(rolling_ar1_df, on=["patch_id", "date"], how="inner")
-
     merged = merged.dropna(subset=LOCAL_CONTROL_COLS + GLOBAL_CONTROL_COLS + ["resilience_ar1"])
     print(f"Merged dataset shape: {merged.shape}")
+
+    # ---- REGIONAL climate controls: whole-study-area mean of key variables each month ----
+    for c in REGIONAL_CLIMATE_VARS:
+        regional_mean = merged.groupby("date")[c].transform("mean")
+        merged[f"regional_{c}"] = regional_mean
+    print("Added regional (whole-area) climate controls:", [f"regional_{c}" for c in REGIONAL_CLIMATE_VARS])
 
     n = len(loc)
     lats, lons, pids = loc["lat"].values, loc["lon"].values, loc["patch_id"].values
@@ -229,10 +243,13 @@ def main():
     for i in range(n):
         dist_matrix[i, :] = haversine(lats[i], lons[i], lats, lons)
     dist_df = pd.DataFrame(dist_matrix, index=pids, columns=pids)
+    latlon_df = loc.set_index("patch_id")[["lat", "lon"]]
 
     resilience_pivot = merged.pivot(index="date", columns="patch_id", values="resilience_ar1").sort_index()
     local_pivots = {c: merged.pivot(index="date", columns="patch_id", values=c).sort_index() for c in LOCAL_CONTROL_COLS}
     oni_series = merged.drop_duplicates("date").set_index("date")["oni_value"].sort_index()
+    regional_series = {c: merged.drop_duplicates("date").set_index("date")[f"regional_{c}"].sort_index()
+                        for c in REGIONAL_CLIMATE_VARS}
     dates_list = resilience_pivot.index.to_list()
     patches = resilience_pivot.columns.to_list()
 
@@ -243,155 +260,145 @@ def main():
             out[pid] = pivot[neighbors].mean(axis=1) if neighbors else np.nan
         return out
 
-    def band_map_for(lo, hi):
-        band_map = {}
-        for pid in patches:
-            d = dist_df.loc[pid]
-            band_map[pid] = [p for p in d[(d > lo) & (d <= hi)].index.tolist() if p in resilience_pivot.columns]
-        return band_map
+    band_map = {}
+    lo, hi = FAR_BAND
+    for pid in patches:
+        d = dist_df.loc[pid]
+        band_map[pid] = [p for p in d[(d > lo) & (d <= hi)].index.tolist() if p in resilience_pivot.columns]
 
-    def fit_directional_model(band_map, lag, direction):
-        """direction='forward': neighbor(t) -> own(t+lag) [real]
-           direction='backward': neighbor(t+lag) -> own(t) [placebo]"""
-        neighbor_resilience = build_neighbor_avg(resilience_pivot, band_map)
-        neighbor_controls = {c: build_neighbor_avg(local_pivots[c], band_map) for c in LOCAL_CONTROL_COLS}
+    neighbor_resilience = build_neighbor_avg(resilience_pivot, band_map)
+    neighbor_controls = {c: build_neighbor_avg(local_pivots[c], band_map) for c in LOCAL_CONTROL_COLS}
+    neighbor_latlon = {}
+    for coord in ["lat", "lon"]:
+        out = pd.Series(index=patches, dtype=float)
+        for pid in patches:
+            neighbors = band_map.get(pid, [])
+            out[pid] = latlon_df.loc[neighbors, coord].mean() if neighbors else np.nan
+        neighbor_latlon[coord] = out
+
+    def build_panel(lag, direction):
         recs = []
         for pid in patches:
             own_res = resilience_pivot[pid].values
             neigh_res = neighbor_resilience[pid].values
             oni_vals = oni_series.reindex(dates_list).values
+            regional_vals = {c: regional_series[c].reindex(dates_list).values for c in REGIONAL_CLIMATE_VARS}
             for i in range(len(dates_list) - lag):
                 if direction == "forward":
-                    own_val, neigh_val, own_future = own_res[i], neigh_res[i], own_res[i + lag]
-                    ctrl_idx = i
-                else:  # backward placebo: mirror the forward model exactly, but with the
-                    # whole time arrow reversed - own(t+lag) and neighbor(t+lag) are the
-                    # "starting point" (matching forward's same-time own(t)+neighbor(t)
-                    # pairing), and own(t) is the "outcome" playing the later role
-                    own_val, neigh_val, own_future = own_res[i + lag], neigh_res[i + lag], own_res[i]
-                    ctrl_idx = i + lag
-                oni_val = oni_vals[ctrl_idx]
+                    own_val, neigh_val, own_future, ctrl_idx = own_res[i], neigh_res[i], own_res[i + lag], i
+                else:
+                    own_val, neigh_val, own_future, ctrl_idx = own_res[i + lag], neigh_res[i + lag], own_res[i], i + lag
                 rec = {"patch_id": pid, "own_resilience_t": own_val, "neighbor_resilience_state": neigh_val,
-                       "own_resilience_future": own_future, "oni_value": oni_val}
+                       "own_resilience_future": own_future, "oni_value": oni_vals[ctrl_idx],
+                       "target_lat": latlon_df.loc[pid, "lat"], "target_lon": latlon_df.loc[pid, "lon"],
+                       "neighbor_lat": neighbor_latlon["lat"][pid], "neighbor_lon": neighbor_latlon["lon"][pid]}
                 for c in LOCAL_CONTROL_COLS:
                     rec[f"target_{c}"] = local_pivots[c][pid].values[ctrl_idx]
                     rec[f"neighbor_{c}"] = neighbor_controls[c][pid].values[ctrl_idx]
+                for c in REGIONAL_CLIMATE_VARS:
+                    rec[f"regional_{c}"] = regional_vals[c][ctrl_idx]
                 recs.append(rec)
-        panel = pd.DataFrame(recs).dropna()
-        if len(panel) < 100:
-            return None  # not enough valid patch pairs in this band (e.g. 0-75km has ~zero
-                          # pairs at this patch spacing - a known, expected skip since Stage 7)
-        control_terms = " + ".join([f"target_{c}" for c in LOCAL_CONTROL_COLS] +
-                                    [f"neighbor_{c}" for c in LOCAL_CONTROL_COLS] +
-                                    GLOBAL_CONTROL_COLS)
-        formula = f"own_resilience_future ~ own_resilience_t + neighbor_resilience_state + {control_terms}"
-        m = smf.ols(formula, data=panel).fit(cov_type="cluster", cov_kwds={"groups": panel["patch_id"]})
-        return m.params["neighbor_resilience_state"], m.pvalues["neighbor_resilience_state"], \
-               m.conf_int().loc["neighbor_resilience_state"], len(panel)
+        return pd.DataFrame(recs).dropna()
 
-    # ================================================================
-    # PART A: Forward vs Backward (placebo) directionality test
-    # ================================================================
-    print(f"\n===== PART A: Directionality test (forward vs backward/placebo) =====")
-    direction_results = []
-    for band_name, (lo, hi) in [("NEAR (75-450km, positive effect)", NEAR_BAND),
-                                  ("FAR (800-1100km, negative effect)", FAR_BAND)]:
-        print(f"\n--- {band_name} ---")
-        band_map = band_map_for(lo, hi)
-        for lag in LAGS:
-            f_result = fit_directional_model(band_map, lag, "forward")
-            b_result = fit_directional_model(band_map, lag, "backward")
-            if f_result is None or b_result is None:
-                print(f"  Lag {lag}mo: SKIPPED (not enough valid patch pairs)")
-                continue
-            f_coef, f_pval, f_ci, f_n = f_result
-            b_coef, b_pval, b_ci, b_n = b_result
-            print(f"  Lag {lag}mo: FORWARD coef={f_coef:+.5f} p={f_pval:.4f} (n={f_n})  |  "
-                  f"BACKWARD(placebo) coef={b_coef:+.5f} p={b_pval:.4f} (n={b_n})")
-            direction_results.append((band_name, lo, hi, lag, "forward", f_coef, f_pval, f_ci[0], f_ci[1], f_n))
-            direction_results.append((band_name, lo, hi, lag, "backward", b_coef, b_pval, b_ci[0], b_ci[1], b_n))
+    local_control_terms = " + ".join([f"target_{c}" for c in LOCAL_CONTROL_COLS] +
+                                      [f"neighbor_{c}" for c in LOCAL_CONTROL_COLS] + GLOBAL_CONTROL_COLS)
+    regional_terms = " + ".join([f"regional_{c}" for c in REGIONAL_CLIMATE_VARS])
+    latlon_terms = "target_lat + target_lon + neighbor_lat + neighbor_lon"
 
-    direction_df = pd.DataFrame(direction_results, columns=[
-        "band", "dist_lo", "dist_hi", "lag_months", "direction", "coef", "pval", "ci_low", "ci_high", "n_obs"
+    steps = [
+        ("Step 1: bare (no controls)", "own_resilience_t + neighbor_resilience_state"),
+        ("Step 2: + local both-side environment (Stage 42/44 model)",
+         f"own_resilience_t + neighbor_resilience_state + {local_control_terms}"),
+        ("Step 3: + regional climate controls",
+         f"own_resilience_t + neighbor_resilience_state + {local_control_terms} + {regional_terms}"),
+        ("Step 4: + lat/lon (geographic confounding)",
+         f"own_resilience_t + neighbor_resilience_state + {local_control_terms} + {regional_terms} + {latlon_terms}"),
+    ]
+
+    print(f"\n===== PROGRESSIVE CONTROLS: far band (800-1100km) negative effect =====")
+    print("Testing whether the effect survives increasingly stringent controls (H0 = it")
+    print("disappears once we control enough = shared forcing/confounding explains it;")
+    print("H1 = it survives = more consistent with a real directional component)\n")
+
+    progressive_results = []
+    for lag in FAR_LAGS:
+        print(f"--- Lag {lag} month(s) ---")
+        panel_fwd = build_panel(lag, "forward")
+        for label, rhs in steps:
+            formula = f"own_resilience_future ~ {rhs}"
+            m = smf.ols(formula, data=panel_fwd).fit(cov_type="cluster", cov_kwds={"groups": panel_fwd["patch_id"]})
+            coef = m.params["neighbor_resilience_state"]
+            pval = m.pvalues["neighbor_resilience_state"]
+            ci_low, ci_high = m.conf_int().loc["neighbor_resilience_state"]
+            sig = "*" if pval < 0.05 else " "
+            print(f"  {label:48s}: coef={coef:+.5f} [{ci_low:+.5f},{ci_high:+.5f}] p={pval:.4f}{sig} n={len(panel_fwd)}")
+            progressive_results.append((lag, label, coef, pval, ci_low, ci_high, len(panel_fwd)))
+
+    progressive_df = pd.DataFrame(progressive_results, columns=[
+        "lag_months", "step", "coef", "pval", "ci_low", "ci_high", "n_obs"
     ])
-    direction_df.to_csv(os.path.join(OUT_DIR, "directionality_test_results.csv"), index=False)
+    progressive_df.to_csv(os.path.join(OUT_DIR, "mechanism_test_progressive_controls.csv"), index=False)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5))
-    for idx, (band_name, (lo, hi)) in enumerate([("NEAR (75-450km)", NEAR_BAND), ("FAR (800-1100km)", FAR_BAND)]):
-        ax = axes[idx]
-        for direction, color in [("forward", "darkred"), ("backward", "gray")]:
-            sub = direction_df[(direction_df["band"].str.startswith(band_name.split(" (")[0])) &
-                                (direction_df["direction"] == direction)].sort_values("lag_months")
-            ax.errorbar(sub["lag_months"], sub["coef"],
-                         yerr=[sub["coef"]-sub["ci_low"], sub["ci_high"]-sub["coef"]],
-                         fmt='o-', capsize=3, color=color, label=direction, alpha=0.8)
-        ax.axhline(0, color='black', linestyle='--', linewidth=1)
-        ax.set_title(band_name)
-        ax.set_xlabel("Lag (months)")
-        ax.set_ylabel("Neighbor resilience effect")
-        ax.legend()
-    plt.suptitle("Forward (real) vs Backward (placebo) - similar strength suggests synchrony, not propagation")
+    fig, ax = plt.subplots(figsize=(9, 6))
+    colors = {3: 'darkorange', 6: 'darkred'}
+    for lag in FAR_LAGS:
+        sub = progressive_df[progressive_df["lag_months"] == lag]
+        ax.errorbar(range(len(sub)), sub["coef"],
+                     yerr=[sub["coef"]-sub["ci_low"], sub["ci_high"]-sub["coef"]],
+                     fmt='o-', capsize=4, color=colors.get(lag, 'gray'), label=f"lag={lag}mo")
+    ax.axhline(0, color='black', linestyle='--', linewidth=1)
+    ax.set_xticks(range(len(steps)))
+    ax.set_xticklabels([s[0].replace("Step ", "").split(":")[0] for s in steps])
+    ax.set_ylabel("Far-band (800-1100km) neighbor resilience effect")
+    ax.set_title("Does the far-distance negative effect survive progressively stronger controls?")
+    ax.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(FIG_DIR, "directionality_forward_vs_backward.png"), dpi=130, bbox_inches="tight")
-    print("\nSaved figures/directionality_forward_vs_backward.png")
+    plt.savefig(os.path.join(FIG_DIR, "mechanism_test_progressive_controls.png"), dpi=130, bbox_inches="tight")
+    print("\nSaved figures/mechanism_test_progressive_controls.png")
 
     # ================================================================
-    # PART B: Propagation-speed test - does the peak effect shift to
-    # longer lags as distance increases?
+    # Final placebo check at the MOST stringent (Step 4) control level
     # ================================================================
-    print(f"\n===== PART B: Propagation-speed test (does peak lag shift with distance?) =====")
-    speed_results = []
-    for b in range(len(DIST_BIN_EDGES) - 1):
-        lo, hi = DIST_BIN_EDGES[b], DIST_BIN_EDGES[b+1]
-        band_map = band_map_for(lo, hi)
-        lag_coefs = []
-        for lag in LAGS:
-            result = fit_directional_model(band_map, lag, "forward")
-            if result is None:
-                continue
-            coef, pval, ci, n_obs = result
-            lag_coefs.append((lag, coef, pval))
-        if not lag_coefs:
-            print(f"  {lo:4d}-{hi:4d}km: SKIPPED (not enough valid patch pairs at this distance)")
-            continue
-        # peak = largest ABSOLUTE coefficient among lags that are significant; if none
-        # significant, report the lag with the largest absolute coefficient anyway (marked)
-        sig_lags = [(l, c, p) for l, c, p in lag_coefs if p < 0.05]
-        if sig_lags:
-            peak_lag, peak_coef, peak_pval = max(sig_lags, key=lambda x: abs(x[1]))
-            note = ""
-        else:
-            peak_lag, peak_coef, peak_pval = max(lag_coefs, key=lambda x: abs(x[1]))
-            note = " (none significant - largest |coef| shown)"
-        mid = (lo + hi) / 2
-        print(f"  {lo:4d}-{hi:4d}km: peak lag={peak_lag}mo, coef={peak_coef:+.5f}, p={peak_pval:.4f}{note}")
-        speed_results.append((lo, hi, mid, peak_lag, peak_coef, peak_pval))
+    print(f"\n===== FINAL PLACEBO CHECK at the most stringent control level (Step 4) =====")
+    final_rhs = steps[-1][1]
+    placebo_results = []
+    for lag in FAR_LAGS:
+        panel_fwd = build_panel(lag, "forward")
+        panel_bwd = build_panel(lag, "backward")
+        formula = f"own_resilience_future ~ {final_rhs}"
+        m_fwd = smf.ols(formula, data=panel_fwd).fit(cov_type="cluster", cov_kwds={"groups": panel_fwd["patch_id"]})
+        m_bwd = smf.ols(formula, data=panel_bwd).fit(cov_type="cluster", cov_kwds={"groups": panel_bwd["patch_id"]})
+        f_coef, f_pval = m_fwd.params["neighbor_resilience_state"], m_fwd.pvalues["neighbor_resilience_state"]
+        b_coef, b_pval = m_bwd.params["neighbor_resilience_state"], m_bwd.pvalues["neighbor_resilience_state"]
+        print(f"  Lag {lag}mo: FORWARD coef={f_coef:+.5f} p={f_pval:.4f}  |  BACKWARD(placebo) coef={b_coef:+.5f} p={b_pval:.4f}")
+        placebo_results.append((lag, "forward", f_coef, f_pval, len(panel_fwd)))
+        placebo_results.append((lag, "backward", b_coef, b_pval, len(panel_bwd)))
 
-    speed_df = pd.DataFrame(speed_results, columns=["dist_lo", "dist_hi", "dist_mid", "peak_lag", "peak_coef", "peak_pval"])
-    speed_df.to_csv(os.path.join(OUT_DIR, "propagation_speed_results.csv"), index=False)
+    placebo_df = pd.DataFrame(placebo_results, columns=["lag_months", "direction", "coef", "pval", "n_obs"])
+    placebo_df.to_csv(os.path.join(OUT_DIR, "mechanism_test_final_placebo.csv"), index=False)
 
-    corr, corr_p = np.nan, np.nan
-    from scipy import stats as sstats
-    if speed_df["peak_lag"].nunique() > 1 and speed_df["dist_mid"].nunique() > 1:
-        corr, corr_p = sstats.spearmanr(speed_df["dist_mid"], speed_df["peak_lag"])
-        print(f"\nCorrelation between distance and peak lag: Spearman r={corr:.3f}, p={corr_p:.4f}")
+    print("\n===== OVERALL VERDICT =====")
+    step4_results = progressive_df[progressive_df["step"] == steps[-1][0]]
+    n_still_sig = (step4_results["pval"] < 0.05).sum()
+    fwd_sig = placebo_df[(placebo_df["direction"] == "forward") & (placebo_df["pval"] < 0.05)]
+    bwd_sig = placebo_df[(placebo_df["direction"] == "backward") & (placebo_df["pval"] < 0.05)]
+    print(f"Effect still significant after ALL controls (Step 4): {n_still_sig} / {len(step4_results)} lags")
+    print(f"Forward still significant at Step 4: {len(fwd_sig)} / {len(FAR_LAGS)} lags")
+    print(f"Backward(placebo) significant at Step 4: {len(bwd_sig)} / {len(FAR_LAGS)} lags")
+    if n_still_sig > 0 and len(bwd_sig) == 0:
+        print("\n-> H1 SUPPORTED: the far-distance negative effect survives progressively stronger")
+        print("   controls (local+regional climate, ONI, lat/lon), while the backward placebo")
+        print("   remains null even at this stringent level. This is meaningfully more compelling")
+        print("   evidence for a genuine directional component than Stage 44 alone - though it")
+        print("   still does not prove a physical/causal mechanism, and unmeasured confounders")
+        print("   can never be fully excluded in an observational design.")
+    elif n_still_sig == 0:
+        print("\n-> H0 SUPPORTED: the far-distance effect disappears once regional climate and/or")
+        print("   geographic controls are added - consistent with shared forcing or spatial")
+        print("   confounding explaining the Stage 42-44 pattern, not a directional relationship.")
     else:
-        print(f"\nCorrelation between distance and peak lag: not computable (peak lag was "
-              f"constant across the distance bands tested - likely too few bands in this run)")
-    if not np.isnan(corr_p) and corr_p < 0.05 and corr > 0:
-        print("-> Peak lag INCREASES with distance - suggestive of an actual propagating signal")
-        print("   (a 'speed' of spread), not just simultaneous synchrony.")
-    else:
-        print("-> No significant relationship between distance and peak lag - does NOT support")
-        print("   literal geographic propagation at a consistent speed; more consistent with")
-        print("   simultaneous synchrony or shared large-scale forcing.")
-
-    print("\n===== OVERALL INTERPRETATION GUIDE =====")
-    print("If forward and backward coefficients are SIMILAR in Part A, that indicates SYNCHRONY")
-    print("(shared forcing / simultaneous co-movement), not directional propagation - the same")
-    print("conclusion reached for the original VOD-based analysis in Stages 9-11. If forward is")
-    print("clearly and consistently stronger than backward, that supports genuine directional")
-    print("influence being more likely (though still not proof of a physical causal mechanism).")
+        print("\n-> MIXED evidence: the effect partially survives but the placebo asymmetry weakens")
+        print("   or disappears - interpret with caution, report both patterns honestly.")
 
 if __name__ == "__main__":
     main()

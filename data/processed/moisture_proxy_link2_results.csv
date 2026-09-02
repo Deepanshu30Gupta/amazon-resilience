@@ -1,0 +1,2 @@
+link,coef,pval,ci_low,ci_high,holds
+M_AB -> target future precip,-16.54794797318315,0.2997194638105839,-47.8230510650158,14.727155118649499,False
