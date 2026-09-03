@@ -1,0 +1,13 @@
+horizon_months,model,test_rmse
+1,1. Baseline,0.6843991279602051
+1,2. Fixed geographic GNN,0.6949441432952881
+1,3. Adaptive/learned GNN,0.7131597399711609
+1,4. Attention-based GNN,0.6933296918869019
+3,1. Baseline,1.1562174558639526
+3,2. Fixed geographic GNN,1.0692046880722046
+3,3. Adaptive/learned GNN,1.073880672454834
+3,4. Attention-based GNN,1.077377200126648
+6,1. Baseline,1.1474034786224365
+6,2. Fixed geographic GNN,1.190100073814392
+6,3. Adaptive/learned GNN,1.2207731008529663
+6,4. Attention-based GNN,1.1959213018417358

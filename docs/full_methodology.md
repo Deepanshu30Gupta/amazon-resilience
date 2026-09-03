@@ -88,7 +88,7 @@
 
 **What we did:** Repeated the Stage 6 regression separately for patches grouped into distance bands (e.g., 75–150km, 150–225km, ... up to 1,100km), using the actual geographic distance between patch centers.
 
-**What we found:** **No meaningful distance decay** — the neighbor effect looked roughly similarly strong even out to 2,500+ km, which is not what a simple "spatial contagion" story would predict.
+**What we found:** **No meaningful distance decay** — the neighbor effect stayed roughly similarly strong (and statistically significant) all the way out to the largest distance band tested, 800–1,100 km. (No distance bands beyond 1,100 km were tested; the study region spans ~2,500 km, but the binned analysis stops at 1,100 km.) A flat pattern out to 1,100 km is not what a simple "spatial contagion" story would predict.
 
 **What it led to:** This was one of the biggest early puzzles of the whole project, and directly motivated the next ~25 stages of environmental-driver testing — if the effect isn't fading with distance, maybe it isn't really about geographic neighbors at all, but about some large-scale shared climate factor (like ENSO) that affects huge areas simultaneously regardless of exact distance.
 
@@ -176,7 +176,7 @@
 
 **What we did:** Added ERA5 temperature anomaly as a control variable to the core neighbor-effect model.
 
-**What we found:** Essentially no change (+0.1%) — temperature explained almost nothing of the neighbor coefficient.
+**What we found:** Essentially no change — temperature explained almost nothing of the neighbor coefficient. In the full specification (local + regional temperature) the coefficient moved from 0.0876 to 0.0875, about a 0.1% reduction; local temperature alone moved it from 0.0865 to 0.0858 (~0.8%). Either way, negligible. *(Recomputed from `temperature_driver_results.csv` and `final_consolidated_results.csv`; the original prose gave "+0.1%", which had the sign backwards — the change is a small reduction, not an increase.)*
 
 **What it led to:** Ruled out temperature as a major explanation; moved on to testing spatial clustering more directly (Stage 15) and other variables (Stage 16 onward).
 
@@ -200,7 +200,7 @@
 
 **What we did:** Added TerraClimate soil moisture and PDSI (Palmer Drought Severity Index) as controls.
 
-**What we found:** Combined, these explained about 3.0% of the neighbor coefficient — a small amount.
+**What we found:** A small amount. Soil moisture and PDSI added only about 1 percentage point of *incremental* explanation on their own (coefficient 0.0858 → 0.0850 in the consolidated chain). The figure sometimes quoted as "3.0%" is the *cumulative* reduction through precipitation + temperature + soil + PDSI combined — i.e. mostly precipitation and temperature, not soil/drought. *(Recomputed from `soil_drought_driver_results.csv` and `final_consolidated_results.csv`, all as a fraction of the original 0.0876 coefficient.)*
 
 **What it led to:** Combined with temperature (Stage 14), the "obvious" local weather variables were clearly not the main explanation — motivated testing something with larger spatial scale next (ENSO, Stage 17).
 
@@ -212,7 +212,7 @@
 
 **What we did:** Added the NOAA ONI (Oceanic Niño Index) as a control variable.
 
-**What we found:** ENSO alone explained **14.3% of the total neighbor coefficient — more than all the previous drivers (temperature, precipitation, soil moisture, PDSI) combined**, adding about 12 additional percentage points beyond what precipitation+temperature+soil+PDSI had already explained. Highly significant (p<0.0001).
+**What we found:** ENSO was **the largest single driver up to this point — its own incremental contribution was about 11 percentage points of the original coefficient (coefficient 0.0850 → 0.0753 in the consolidated chain), more than precipitation, temperature, soil moisture and PDSI combined (~3 points together)**. The cumulative reduction through precipitation + temperature + soil + PDSI + ENSO reached about 14% of the original coefficient. Highly significant (p ≈ 1.6×10⁻⁵). *(Recomputed from `enso_driver_results.csv` and `final_consolidated_results.csv`. The earlier "14.3% … ENSO alone" phrasing conflated ENSO's incremental effect with the running cumulative total.)*
 
 **What it led to:** This was the biggest single driver found up to this point in the project, and it made physical sense given ENSO's known continent-scale reach — strongly suggested we were on the right track looking for large-scale shared climate explanations, and set up the search for other similarly-large-scale variables (leading eventually to VPD, Stage 29, which turned out to be even bigger).
 
@@ -248,10 +248,9 @@
 
 **What we did:** Added latitude and longitude as explicit controls in the Stage 18 model, to see if the disturbance-distance effect survived.
 
-**What we found:** Latitude explained about 57% of the disturbance-distance relationship — a substantial chunk — but the disturbance-distance effect remained statistically significant (p<0.0001) even after controlling for latitude and longitude. So it wasn't *purely* a latitude artifact, though latitude was clearly part of the story.
+**What we found:** Geographic position explained a substantial chunk of the disturbance-distance relationship, but did not eliminate it. Adding **latitude alone** attenuated the disturbance-distance coefficient by about 24% (0.0080 → 0.0061); adding **latitude and longitude together** brought the combined attenuation to about 57% (0.0080 → 0.0035). Even in that fully geography-controlled model the disturbance-distance effect remained highly significant (p ≈ 9×10⁻⁷). So it wasn't *purely* a geography artifact, though geographic position was clearly part of the story. *(Recomputed from `disturbance_latitude_control_results.csv`; the earlier prose credited the full 57% to "latitude", but ~57% requires longitude as well — latitude by itself is ~24%.)*
 
 **What it led to:** Confirmed the human-disturbance finding (Stage 18) as real, if partially latitude-related, and — importantly — confirmed yet again that this finding was about *individual patch* resilience trend, not about the neighbor-synchrony question, which remained completely unaffected (0% change) throughout Stages 18–20. This "individual patch resilience vs. cross-patch synchrony are different questions" pattern would repeat again later with TWI (Stage 32).
--e 
 
 
 # Complete Stage-by-Stage Results Log — PART B CONTINUED (Stages 21–33)
@@ -314,7 +313,7 @@
 
 **What we did:** Used the fitted model to simulate a counterfactual "poor neighbor" scenario and calculated the implied change in a patch's own vegetation.
 
-**What we found:** A small estimated effect (mean −0.001165 overall; −0.000953 for resilience-loss patches specifically, equivalent to roughly 4–5% of one standard deviation) — model-implied, not a directly observed causal effect.
+**What we found:** A small estimated effect. Across *all* observations the model-implied "neighbor effect" averages essentially zero (mean ≈ −8×10⁻⁶) — as expected, since it averages over neighbors that were sometimes above and sometimes below normal. Restricting to the scenario the research question actually asks about — months when the neighbor was in an anomalously *poor* state (neighbor VOD anomaly < 0) — the model-implied effect on the target's own next-month vegetation was **−0.001165** on average, and **−0.000953** for resilience-loss patches specifically (about 3.6% of one standard deviation of monthly VOD anomaly). Model-implied, not a directly observed causal effect. *(Recomputed from `counterfactual_results.csv`. The earlier prose labelled the −0.001165 figure "overall"; it is actually the conditional mean for the neighbor-anomalously-poor subset, which is the quantity the script deliberately reports.)*
 
 **What it led to:** One more piece of evidence that, while statistically detectable, the neighbor effect's practical magnitude (in this raw-vegetation framing) was small — reinforcing the shift toward asking a more specific question (resilience-to-resilience, not vegetation-to-vegetation) later in the project.
 
@@ -333,6 +332,8 @@
 ---
 
 ## Stage 27: Building Two GNN Architectures
+
+> **Repository audit note (2026-09-03):** No script or output file for this stage exists in this repository. `gnn_tensors.pt` (Stage 26's output) is committed, but nothing consumes it here, and the earliest committed GNN result is Stage 35's. The results described below are not reproducible from this repo and should be treated as unverified pending confirmation from the original analysis session.
 
 **Why we did this:** To directly test whether more sophisticated spatial modeling could extract useful structure from the patch network that simpler methods (Stages 22–24) had missed.
 
@@ -362,7 +363,7 @@
 
 **What we did:** Added VPD (Vapor Pressure Deficit — essentially "how thirsty the atmosphere is," calculated from temperature and dewpoint using the Tetens formula), wind speed, solar radiation, and cloud fraction (from MODIS, at coarser ~1° resolution) as additional controls, building on top of the existing precipitation+temperature+soil+PDSI+ENSO baseline.
 
-**What we found:** Baseline (with corrected boundaries): 0.0753. Adding VPD alone dropped this to 0.0563 — **a 25% reduction, the single largest driver found anywhere in the entire project**, bigger even than ENSO. Adding wind on top brought it to 0.0556; adding solar radiation brought it to 0.0546 (26.1% total reduction from this group of variables). Cloud cover showed a directional effect too, though on a smaller, different sample due to its coarser resolution.
+**What we found:** Baseline (with corrected boundaries): 0.0753. Adding VPD alone dropped this to 0.0563 — **a 25% reduction relative to that baseline (≈21.6 percentage points of the original 0.0876 coefficient), the single largest driver found anywhere in the entire project**, bigger even than ENSO. Adding wind on top brought it to 0.0556; adding solar radiation brought it to 0.0546 — a 27.4% reduction from the Stage-29 baseline for this group of variables (VPD + wind + solar), or about 23.6 percentage points of the original coefficient. Cloud cover showed a directional effect too, though on a smaller, different sample due to its coarser resolution. *(Percentages recomputed from `vpd_wind_cloud_radiation_results.csv` and `final_consolidated_results.csv`; the earlier "26.1%" figure was ~1.3 points low.)*
 
 **What it led to:** VPD's outsized importance was a genuinely interesting scientific finding in its own right — physically, it makes sense that atmospheric moisture demand would be a dominant driver of vegetation stress, more so than temperature or rainfall alone. Motivated continuing to test a few more remaining candidate variables (Stages 30–32) before consolidating everything into one final combined model (Stage 33).
 
@@ -374,7 +375,7 @@
 
 **What we did:** Added ERA5-Land root-zone soil moisture (combining two deeper soil layers, roughly 7–100cm depth) as an additional control on top of everything tested so far.
 
-**What we found:** A further, smaller reduction — from 0.0546 to 0.0533 (2.4% additional reduction). Running cumulative total at this point: about 29.2% of the original coefficient explained.
+**What we found:** A further, smaller reduction — from 0.0546 to 0.0533, about a 2.4% reduction relative to the pre-RZSM coefficient. Cumulative reduction from the **original** coefficient (0.0876) at this point: about **39%**. *(The figure previously quoted as "29.2% of the original coefficient" is actually 29.2% measured against the corrected Stage-29 baseline of 0.0753, not against the original — the two denominators were mixed up. Recomputed from `rzsm_driver_results.csv` and `final_consolidated_results.csv`.)*
 
 **What it led to:** Confirmed RZSM added modest additional explanatory value beyond surface soil moisture; set up testing one more physically-motivated variable (canopy temperature) next.
 
@@ -386,7 +387,7 @@
 
 **What we did:** Calculated ΔT (MODIS land-surface temperature minus ERA5 2-meter air temperature) for each patch and added it as a further control.
 
-**What we found:** A further reduction from 0.0533 to 0.0513 — running cumulative total around 32% explained.
+**What we found:** A further reduction from 0.0533 to 0.0513. Cumulative reduction from the **original** coefficient (0.0876): about **41.5%** — essentially the project's final environmental-explanation total, since TWI and distance-to-disturbance (Stages 32–33) add nothing further. *(The "around 32%" previously quoted here is ~32% measured against the corrected Stage-29 baseline of 0.0753, not the original. Recomputed from `deltaT_driver_results.csv` and `final_consolidated_results.csv`.)*
 
 **What it led to:** One more small but real contributor identified; set up testing the final planned variable (terrain wetness) next.
 
@@ -412,10 +413,9 @@
 
 **What we did:** Built one combined regression including all 12 previously-tested drivers simultaneously (precipitation, temperature, soil moisture, PDSI, ENSO, VPD, wind, solar radiation, RZSM, ΔT, TWI, and distance-to-disturbance), using the corrected geographic-boundary calculation throughout, and tracked the neighbor coefficient's value at each step as variables were added in sequence.
 
-**What we found:** **Original coefficient: 0.0876. Final coefficient with all 12 drivers included: 0.0513. Total reduction: 41.4%. Remaining unexplained: 58.6%.** VPD alone accounted for roughly 33 of the 41.4 percentage points explained — meaning VPD alone was responsible for about 80% of everything the entire 12-driver search managed to explain. TWI and distance-to-disturbance, consistent with their individual tests, added exactly 0% to this final combined chain as well.
+**What we found:** **Original coefficient: 0.0876. Final coefficient with all 12 drivers included: 0.0513. Total reduction: 41.4%. Remaining unexplained: 58.6%.** VPD alone accounted for about **21.6 of the 41.4 percentage points** explained (coefficient 0.0753 → 0.0563) — **roughly half** of everything the 12-driver search managed to explain, and the single largest contributor. ENSO was second, at about 11 points. Precipitation, temperature, soil moisture, PDSI, wind, solar radiation, RZSM and ΔT each contributed 1–2 points or less; TWI and distance-to-disturbance added exactly 0.0 points to the final combined chain, consistent with their individual tests. *(Recomputed from `final_consolidated_results.csv`. The earlier "roughly 33 of 41.4 points / about 80%" for VPD does not reconcile with the CSV — VPD's incremental drop is 0.0189, i.e. 21.6 points of the original coefficient and ~52% of the total explained.)*
 
 **What it led to:** This was the single most important number motivating the next phase of the project. With the majority (58.6%) of the original neighbor-synchrony pattern still unexplained even after the most thorough environmental-control effort in the project, this provided strong, well-earned justification for trying a more sophisticated tool — returning to the Graph Neural Network work (Stages 34–38) with a much stronger scientific rationale than before: there was a real, substantial pattern left to explain, not just a fishing expedition for statistical significance.
--e 
 
 
 # Complete Stage-by-Stage Results Log — PART C (Stages 34–44)
@@ -498,19 +498,42 @@
 
 ---
 
-## Stage 36 (Corrected) & Stage 37 (Corrected): Final, Verified GNN Results
+## Stage 36 (Corrected) & Stage 37 (Corrected): Re-running Multi-Horizon and Seed-Robustness on Normalized Data
 
-**Why we did this:** To get the final, fully-verified versions of the multi-horizon and multi-seed robustness tests, now using the properly normalized data.
+> **Repository audit note (2026-09-03):** when this repository was audited, the corrected/normalized versions of these two stages did **not** exist — only the single-horizon Stage 35 comparison had been redone on normalized data. The original prose below claimed the baseline won every horizon "more decisively" on normalized data; there was no file backing that. The reruns were executed during the audit using `src/36_gnn_multi_horizon_normalized.py` and `src/37_gnn_seed_robustness_normalized.py` (identical model code and procedure to the originals, loading `gnn_tensors_expanded_normalized.pt`), producing `gnn_multi_horizon_results_normalized.csv` and `gnn_seed_robustness_results_normalized.csv`. The "What we found" section has been rewritten to match those actual outputs, which do **not** support the original claim.
 
-**What we did:** Reran both the full 3-horizon comparison and the 5-seed robustness comparison on the corrected, normalized dataset.
+**Why we did this:** To get the multi-horizon and multi-seed robustness tests onto the corrected, feature-standardized pipeline, matching the Stage 35 correction.
 
-**What we found:** The baseline won at **every single horizon** (1, 3, 6 months) with no exceptions this time. Across the 5-seed robustness test: baseline mean RMSE was still clearly the best on average, and (in this final, corrected version) the pattern was more decisively in the baseline's favor than the earlier uncorrected version had shown.
+**What we did:** Reran the full 3-horizon comparison and the 5-seed (1-month-horizon) robustness comparison on `gnn_tensors_expanded_normalized.pt`, with model code, training procedure, and train/val/test splits unchanged.
 
-**What it led to:** This closed the entire GNN/prediction-usefulness investigation with full confidence: the spatial relationship between patches, while statistically real and robust (established in Stages 6–33), is genuinely **not exploitable for improving vegetation prediction**, by any of the four architectures tested, at any of the three timescales tested, verified under both an initial (buggy) and a corrected (properly normalized) version of the analysis. This definitively closed the "can we predict better using neighbors" line of inquiry and motivated the project's pivot toward a more precisely-defined question (see Stage 41 onward): not "can A's state predict B," but specifically "does A *losing resilience* relate to B."
+**What we found — normalization removes the baseline's clean sweep:**
+
+*Multi-horizon* (`gnn_multi_horizon_results_normalized.csv`, test RMSE):
+
+| Horizon | Baseline | Fixed-geographic | Adaptive/learned | Attention | Best spatial vs baseline |
+|--------:|---------:|-----------------:|-----------------:|----------:|:------------------------:|
+| 1 month | **0.6844** | 0.6949 | 0.7132 | 0.6933 | −1.3% (baseline best) |
+| 3 months | 1.1562 | **1.0692** | 1.0739 | 1.0774 | **+7.5% — all three spatial models beat the baseline** |
+| 6 months | **1.1474** | 1.1901 | 1.2208 | 1.1960 | −3.7% (baseline best) |
+
+*Seed robustness* (`gnn_seed_robustness_results_normalized.csv`, 1-month horizon, 5 seeds, test RMSE):
+
+| Model | mean | std | best | worst | outright wins (of 5 seeds) |
+|---|---:|---:|---:|---:|:--:|
+| Fixed-geographic GNN | 0.6966 | 0.0070 | 0.6848 | 0.7069 | 2 |
+| Attention GNN | 0.6972 | 0.0123 | 0.6782 | 0.7137 | 2 |
+| Baseline (no spatial) | 0.6976 | 0.0083 | 0.6844 | 0.7089 | 1 |
+| Adaptive/learned GNN | 0.7079 | 0.0090 | 0.6977 | 0.7198 | 0 |
+
+On the corrected pipeline the baseline is **no longer the best model**: it has the lowest RMSE in only 1 of 5 seeds (seed 789), and its mean RMSE (0.6976) is marginally *higher* than the fixed-geographic GNN (0.6966) and the attention GNN (0.6972). Those three sit within ~0.001 RMSE of each other and well inside the seed-to-seed spread (std ≈ 0.007–0.012), so they are best read as statistically indistinguishable at the 1-month horizon. The adaptive/learned GNN is consistently the weakest.
+
+**What it led to — corrected conclusion:** the honest statement is *no consistent or meaningful advantage in either direction*. Spatial structure does not reliably improve prediction (the linear tests in Stages 22–24 found this more definitively), but on the corrected pipeline it is not reliably worse either, and at the 3-month horizon the fixed-geographic GNN is clearly ahead (−7.5% RMSE). The earlier conclusion — "the baseline beats every spatial mechanism at every horizon and every seed" — was an artifact of the un-normalized feature scales and does not survive the fix. This still supports moving away from a prediction framing toward the resilience-to-resilience question (Stage 41 onward), but on the grounds that *no* approach predicts these 17–19-sequence test sets well, not that spatial information is worthless.
 
 ---
 
 ## Stage 39: The First Distance-Banded, Fully-Controlled Residual Effect Model
+
+> **Repository audit note (2026-09-03):** No script or output file for this stage exists in this repository. There is no committed raw-VOD distance × lag table with the full 12-driver control set. The results described below are not reproducible from this repo and should be treated as unverified pending confirmation from the original analysis session.
 
 **Why we did this:** Before making the full conceptual pivot to a resilience-based outcome (which happened in Stage 41), we first built one more, more complete version of the original vegetation-based analysis — combining the distance-banding approach (Stage 7) with the full 12-driver environmental control set (Stage 33) and multiple time lags simultaneously, something no earlier stage had done all together.
 
@@ -523,6 +546,8 @@
 ---
 
 ## Stage 40: Adding the Neighbor's Own Environmental Controls, and Testing Interaction Effects
+
+> **Repository audit note (2026-09-03):** No standalone script or output file for this stage exists in this repository. The both-sided-controls and standardized-interaction methodology it describes does appear in `src/42_resilience_to_resilience.py`, but the raw-VOD version of the analysis described here has no committed output. Treat its specific results as unverified pending confirmation from the original analysis session.
 
 **Why we did this:** Two remaining gaps were identified in the team's methodology review: (1) earlier models only controlled for the *target* patch's own environment, not the *source/neighbor* patch's environment — leaving room for a subtle confound if A and B experience similar-but-not-identical local weather; and (2) every model treated the neighbor effect as a fixed, constant number, never testing whether the relationship's *strength* depends on environmental conditions (e.g., is A's influence on B stronger during drought?).
 
@@ -556,7 +581,7 @@
 
 **What we found — two major results:**
 1. **Real distance decay, for the first time in the whole project:** a significant positive relationship from 75km out to about 650km at the 1-month lag, fading to non-significant beyond that — something no earlier, raw-vegetation-based analysis had ever found.
-2. **The most consistent finding in the entire project:** four specific factors about the *target* patch's own conditions — its own soil moisture, root-zone soil moisture, TWI, and distance-to-disturbance — **all significantly modulated the neighbor-resilience effect at every single lag tested (1, 2, 3, and 6 months).** The pattern: patches with better water buffering, or sitting deeper in intact forest, appeared more independent/buffered from their neighbors' resilience states; patches closer to disturbance or in drier terrain were more tightly coupled to what was happening around them — a physically sensible, genuinely interesting ecological finding.
+2. **The most consistent finding in the entire project:** factors about the *target* patch's own conditions modulated the neighbor-resilience effect. **Soil moisture, TWI, and distance-to-disturbance were significant at all four lags tested (1, 2, 3, and 6 months); root-zone soil moisture was significant at lags 1–3 but not at lag 6 (p = 0.46).** The pattern: patches with better water buffering, or sitting deeper in intact forest, appeared more independent/buffered from their neighbors' resilience states; patches closer to disturbance or in drier terrain were more tightly coupled to what was happening around them — a physically sensible, genuinely interesting ecological finding. *(Lag-by-lag significance taken from `resilience_to_resilience_susceptibility.csv`; the earlier prose said all four factors held "at every single lag", which is not true for root-zone soil moisture at lag 6.)*
 
 **What it led to:** Given how rich and novel these findings were, the team decided to prioritize validating them thoroughly before treating them as final — leading directly to the window-length sensitivity check (Stage 43).
 
@@ -582,13 +607,14 @@
 
 **A real bug we caught and fixed while building this:** an early version of the backward "placebo" test accidentally set the outcome variable equal to one of its own predictor variables (a trivial mathematical identity), producing meaningless, artificially "confident" results. Caught because the numbers looked suspicious, and fixed to properly mirror the forward model with the time direction genuinely reversed.
 
-**What we found — a clean, two-regime pattern:**
-- **Near/intermediate distances (75–650km):** the forward and backward tests looked similarly strong at every lag tested → more consistent with **synchrony** (shared external forcing) than with genuine directional influence.
-- **Far distances (800–1,100km):** the forward test was significantly negative (particularly at 3-month and 6-month lags), while the backward test stayed weak and non-significant throughout → a real, meaningful **asymmetry**, more consistent with genuine directional influence than pure synchrony.
-- **Bonus finding on "peak lag":** every distance band from 75–650km peaked at the 1-month lag (fast response); every band from 650–1,100km peaked at the 6-month lag (slow response) — a clean step-change around 650km, not a smooth, gradual transition (which is also why the formal statistical test for "does peak lag increase smoothly with distance" wasn't significant — the pattern is a genuine step, not a gradient).
+**What we found — a two-regime pattern:**
+- **Near band (75–450km in the formal placebo test):** forward and backward were similarly strong at the 1-, 2- and 3-month lags → more consistent with **synchrony** (shared external forcing) than with genuine directional influence. (At the 6-month lag they diverged — forward significant, backward not — but this is not the regime the near-band story rests on.)
+- **Far distances (800–1,100km):** the forward test was significantly negative at the **3-month and 6-month lags**, while the backward (placebo) test was null at those lags → a real, meaningful **asymmetry** at 3 and 6 months, more consistent with genuine directional influence than pure synchrony. Note the asymmetry is *not* clean at every lag: at the 1-month lag the far-band backward test was itself significant (coef ≈ +0.0081, p ≈ 0.009) while the forward test was not. The forward-significant / backward-null signature holds specifically at the 3- and 6-month lags.
+- **Bonus finding on "peak lag":** every distance band from **150km to 650km** peaked at the 1-month lag (fast response); the nearest band (75–150km) peaked at the 2-month lag; every band from 650–1,100km peaked at the 6-month lag (slow response) — a clean step-change around 650km, not a smooth, gradual transition (which is also why the formal statistical test for "does peak lag increase smoothly with distance" wasn't significant — the pattern is a genuine step, not a gradient).
+
+*(Bands and significance recomputed from `directionality_test_results.csv` and `propagation_speed_results.csv`. The earlier prose said "similarly strong at every lag" for the near band and the backward test "stayed weak and non-significant throughout" for the far band and "every band from 75–650km peaked at the 1-month lag" — each of these had one exception, corrected above.)*
 
 **What it led to:** This was a major finding in its own right — establishing that the near and far distance regimes appear to work by genuinely different mechanisms (fast/symmetric/positive vs. slow/asymmetric/negative), not just different strengths of the same thing. Given how interesting and novel the far-distance directional-looking pattern was, the team decided this deserved serious, dedicated stress-testing before it could be trusted as a real scientific finding — setting up the extensive robustness arc that followed (Stages 45–48).
--e 
 
 
 # Complete Stage-by-Stage Results Log — PART D (Stages 45–50 and Final Conclusion)
@@ -690,7 +716,7 @@
 - Near/intermediate distances (75–650 km): fast (peaks at 1-month lag), positive, largely symmetric forward/backward → consistent with synchrony (shared response to regional conditions).
 - Far distances (800–1,100 km): slow (peaks at 6-month lag), negative, asymmetric forward/backward → more consistent with a genuine directional component.
 
-**The susceptibility finding (the single most consistent result in the entire 50-stage project):** a target patch's own soil moisture, root-zone soil moisture, terrain wetness (TWI), and distance from human disturbance **all significantly modulate how strongly it's affected by its neighbors' resilience state — at every single time lag tested.** Patches with better water buffering or farther from disturbance appear more independent; drier or disturbance-adjacent patches are more tightly coupled to their surroundings. This finding never wavered across any robustness test in the project.
+**The susceptibility finding (the most consistent result in the project):** in the Stage 42 interaction model, a target patch's own soil moisture, terrain wetness (TWI), and distance from human disturbance **significantly modulate how strongly it's affected by its neighbors' resilience state — at all four time lags tested (1, 2, 3, 6 months). Root-zone soil moisture shows the same modulation at lags 1–3 but not at lag 6 (p = 0.46).** Patches with better water buffering or farther from disturbance appear more independent; drier or disturbance-adjacent patches are more tightly coupled to their surroundings. This is the finding that reproduced most consistently across lags; note the dedicated robustness stages (43, 46) re-tested the far-distance *main* effect, not the susceptibility interactions, so the susceptibility result rests on the Stage 42 model alone.
 
 ## What NOT to Claim (important for credibility with judges)
 
